@@ -1,34 +1,56 @@
 const puppeteer = require("puppeteer");
-const express = require("express");
-const app = express();
+var mongo = require("mongodb");
+const url = "mongodb+srv://akanshsaxena:Mongo%40723@covid19-neusj.mongodb.net/Covid19";
+var dataBase = "dataBase";
+var collection = "countryWiseData";
 
-app.use(express.json());
+mongo.connect(url,{ useNewUrlParser: true }, function(err, db) {
+  if (err) throw err;
+  console.log("Database created!");
+  db.close();
+});
 
-let data = [];
 
-async function addData(place, confirmed, perMillion, recovered, deaths){
-    if(data){
-        const jsonData= {placeA:place, confirmedA:confirmed , perMillionA:perMillion , recoveredA:recovered , deathsA: deaths};
-        data.push(jsonData);
-    }
-}
+mongo.connect(url,{ useNewUrlParser: true }, function(err, db){
+	if (err) throw err;
+  var dbo = db.db(dataBase);
+  dbo.createCollection(collection, function(err, res) {
+    if (err) throw err;
+    db.close();
+  });
+});
+
+
 async function getValue(element, propertyName){
+  try{
     const property = await element.getProperty(propertyName);
     return await property.jsonValue();
+  }
+  catch(error){
+    console.log(`5 ${error}`);
+  }
 }
 
 async function dataScraper(){
+  try{
     const browser = await puppeteer.launch();
     const page = await browser.newPage();
-    await page.goto("https://www.google.com/covid19-map/");
-
+    await page.setDefaultNavigationTimeout(0);
+    await page.goto("https://www.google.com/covid19-map/", { waitUntil: 'networkidle0' });
+    console.log("connecting to Mongo Database");
     await getData(page);
     await browser.close();
+  }
+  catch(error){
+    console.log(`3 ${error}`);
+  }
 }
 
 async function getData(page){
     const tableBody = await page.$('tbody');
-    const tableData = await tableBody.$$('tr');
+    const tableData = await tableBody.$$("tr");
+    console.log(`tableData length ${tableData.length}`);
+    let count = 0;
     const rowsMapping = tableData.map(async (rows)=>{
         const values = await rows.$$('td');
         let index = 0;
@@ -36,20 +58,25 @@ async function getData(page){
         for(index=0; index<values.length; index++){
             arr[index] = await getValue(values[index], 'innerText');
         }
-      console.log(`${arr[0]}, ${arr[1]},${arr[2]},${arr[3]},${arr[4]}`);
-      addData(arr[0], arr[1], arr[2], arr[3], arr[4]);
+      const jsonData={
+        country: arr[0],
+        confirmedCases: arr[1],
+        patientsPerMillion: arr[2],
+        recoveredPatients: arr[3],
+        deaths: arr[4]
+      };
+      count++;
+      console.log(arr);
+      await mongo.connect(url,{ useNewUrlParser: true }, function(err, db){
+      	if (err) throw err;
+        var dbo = db.db(dataBase);
+        dbo.collection(collection).update({country: arr[0]}, jsonData, { upsert: true });
+        db.close();
+      });
     });
     await Promise.all(rowsMapping);
+    console.log(`Updated ${count} fields`);
 }
 
-app.use('/getData', async (req, res)=>{
-    console.log("Calling data scrapper");
-    await dataScraper();
-    //console.log(output);
-    console.log("Scrapper ended");
-    res.send(data);
-});
 
-const port = process.env.PORT || 3000;
-
-app.listen(port, ()=> console.log(`Listening to port ${port}`));
+module.exports.dataScraper = dataScraper;

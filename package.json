@@ -11,8 +11,11 @@
   "license": "ISC",
   "dependencies": {
     "@hapi/joi": "^17.1.1",
+    "cron": "^1.8.2",
     "express": "^4.17.1",
-    "joi": "^13.1.0",
+    "joi": "^13.7.0",
+    "mongodb": "^3.5.5",
+    "mongoose": "^5.9.7",
     "nodemon": "^2.0.2",
     "puppeteer": "^2.1.1"
   }
