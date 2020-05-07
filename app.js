@@ -1,6 +1,6 @@
 const express = require('express');
 const Joi = require('joi');
-const mongo = require('./mongoConnect.js');
+const mongoose = require('./mongoData.js');
 const app = express();
 
 require("./cronJob.js");
@@ -20,12 +20,13 @@ app.get('/api/country/:country', async (req, res)=>{
       res.status(400).send(result.error.details[0].message);
     }
     else{
-      const searchData = await mongo.searchCountryWiseData(req.params.country);
-      if(searchData){
-        res.send(searchData);
+      const countryName = req.params.country.replace(/\s/g,"").toLowerCase();
+      const searchData = await mongoose.searchCountryWiseData(countryName);
+      if(searchData==null){
+        res.status(400).send("Data not found for provided country");
       }
       else{
-        res.status(404).send("Data not found");
+        res.send(searchData);
       }
     }
 });

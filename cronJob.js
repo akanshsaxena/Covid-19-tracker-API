@@ -3,8 +3,8 @@ const scrapper = require("./scrapper.js");
 
 console.log("Creating Cron Job");
 
-// 0 */2 * * *
-const fetchJobToRun = new CronJob("* * * * *", async ()=>{
+// 0 */2 * * * for every 2 hours
+const fetchJobToRun = new CronJob("0 */2 * * *", async ()=>{
   console.log("Fetching time");
   let currentdate = new Date();
   let datetime = "Last Sync: " + currentdate.getDate() + "/"
